@@ -33,7 +33,7 @@ runs:
         service_account: github-actions-workflow@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
 
     - name: Connect to Artifact Registry
-      shell: |-
+      run: |-
         echo ${{ steps.auth.outputs.access_token }} | docker login -u oauth2accesstoken --password-stdin https://${{ env.REPOSITORY_REGION }}-docker.pkg.dev
 
     - name: Docker metadata
