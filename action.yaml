@@ -1,21 +1,60 @@
-name: Hello, World!
-description: Greet someone and record the time
-author: GitHub Actions
-
-# Define your inputs here.
-inputs:
-  who-to-greet:
-    description: Who to greet
-    required: true
-    default: World
-
-# Define your outputs here.
-outputs:
-  time:
-    description: The time we greeted you
-
+name: gm alpine image
+on:
+  push:
+    branches:
+      - ci/*
+    tags:
+      - '**'
+env:
+  PROJECT_ID: prj-fevo-c-artifact-9580
+  PROJECT_NUMBER: 839220249789
+  REPOSITORY: c-base-us-artifact-repo
+  REPOSITORY_REGION: us
+  IMAGE: gm-alpine
+description:
 runs:
-  using: docker
-  image: Dockerfile
-  env:
-    INPUT_WHO_TO_GREET: ${{ inputs.who-to-greet }}
+  using: composite
+  uses: ubuntu-latest
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up Python 3.9
+      uses: actions/setup-python@v2
+      with:
+        python-version: 3.9
+
+    - id: 'auth'
+      name: 'Obtain access token by using workload identity federation'
+      uses: 'google-github-actions/auth@v1'
+      with:
+        create_credentials_file: true
+        token_format: access_token
+        workload_identity_provider: projects/${{ env.PROJECT_NUMBER }}/locations/global/workloadIdentityPools/github-actions/providers/github-actions-oidc
+        service_account: github-actions-workflow@${{ env.PROJECT_ID }}.iam.gserviceaccount.com
+
+    - name: Connect to Artifact Registry
+      run: |-
+        echo ${{ steps.auth.outputs.access_token }} | docker login -u oauth2accesstoken --password-stdin https://${{ env.REPOSITORY_REGION }}-docker.pkg.dev
+
+    - name: Docker metadata
+      id: meta
+      uses: docker/metadata-action@v4 # https://github.com/docker/metadata-action
+      with:
+        images: ${{ env.REPOSITORY_REGION }}-docker.pkg.dev/${{ env.PROJECT_ID }}/${{ env.REPOSITORY }}/${{ env.IMAGE }}
+        tags: |  # https://github.com/docker/login-action
+          # branch event
+          type=ref,event=branch
+          # tag event
+          type=ref,event=tag
+          # pull request event
+          type=ref,event=pr
+
+    - name: Docker build and push
+      uses: docker/build-push-action@v4  # https://github.com/docker/build-push-action
+      with:
+        #         context: ./Groupmatics.Api
+        file: ./Groupmatics.Api/Dockerfile-Alpine
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
