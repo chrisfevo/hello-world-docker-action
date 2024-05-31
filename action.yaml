@@ -10,7 +10,7 @@ env:
   PROJECT_NUMBER: 839220249789
   REPOSITORY: c-base-us-artifact-repo
   REPOSITORY_REGION: us
-  IMAGE: gm-alpine
+  IMAGE: gm-alpine7
 description:
 runs:
   using: composite
